@@ -234,3 +234,12 @@ If this guide helped you:
 - ⭐ Star the repository
 - 🐞 Open issues
 - 🤝 Submit pull requests
+
+---
+
+## 🧑‍💻 Author
+
+[**Prem Raichura**](https://portfolio-prem-raichura.vercel.app/)
+* **GitHub:** [prem-raichura](https://github.com/prem-raichura)
+* **LinkedIn:** [prem-raichura](https://www.linkedin.com/in/prem-raichura/)
+
