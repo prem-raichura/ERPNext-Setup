@@ -64,7 +64,7 @@ Create an `apps.json` file in the same directory where `compose.yaml` is present
 [
   {
     "url": "https://github.com/frappe/erpnext",
-    "branch": "version-15"
+    "branch": "version-16"
   },
   {
     "url": "https://github.com/frappe/hrms",
@@ -97,9 +97,9 @@ Replace `PASTE_NEW_STRING_HERE` with the Base64 string copied above.
 docker build ^
   --build-arg=PYTHON_VERSION=3.12 ^
   --build-arg=FRAPPE_PATH=https://github.com/frappe/frappe ^
-  --build-arg=FRAPPE_BRANCH=version-15 ^
+  --build-arg=FRAPPE_BRANCH=version-16 ^
   --build-arg=APPS_JSON_BASE64=PASTE_NEW_STRING_HERE ^
-  --tag=custom-erpnext-hrms:v15 ^
+  --tag=custom-erpnext-hrms:v16 ^
   --file=images/custom/Containerfile .
 ```
 
@@ -184,9 +184,9 @@ To add another Frappe app later:
 docker build ^
   --build-arg=PYTHON_VERSION=3.12 ^
   --build-arg=FRAPPE_PATH=https://github.com/frappe/frappe ^
-  --build-arg=FRAPPE_BRANCH=version-15 ^
+  --build-arg=FRAPPE_BRANCH=version-16 ^
   --build-arg=APPS_JSON_BASE64=PASTE_NEW_STRING_HERE ^
-  --tag=custom-erpnext-hrms:v15-updated ^
+  --tag=custom-erpnext-hrms:v16-updated ^
   --file=images/custom/Containerfile .
 ```
 
@@ -197,7 +197,7 @@ docker build ^
 Update the image tag in `.env`:
 
 ```env
-CUSTOM_TAG=v15-updated
+CUSTOM_TAG=v16-updated
 ```
 
 Restart containers:
