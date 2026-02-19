@@ -253,4 +253,10 @@ Password: Admin@123
 ✔ Custom ERPNext v16 + HRMS v16 image\
 ✔ Production-ready architecture
 
-For SSL, domain, and backup configuration, additional setup is required.
+---
+
+## 🧑‍💻 Author
+
+[**Prem Raichura**](https://portfolio-prem-raichura.vercel.app/)
+* **GitHub:** [prem-raichura](https://github.com/prem-raichura)
+* **LinkedIn:** [prem-raichura](https://www.linkedin.com/in/prem-raichura/)
