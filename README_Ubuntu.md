@@ -1,21 +1,50 @@
-# 🚀 ERPNext v16 + HRMS v16 Docker Setup (Ubuntu)
+# 🚀 ERPNext v16 + HRMS v16 Offline Docker Setup (Ubuntu 24.04)
 
-This guide provides a complete **from-scratch setup** for running:
+This guide explains how to install ERPNext + HRMS on an Ubuntu server
+when GitHub access is blocked by a firewall.
 
--   ERPNext v16
--   Frappe v16
--   HRMS v16
--   Docker Engine (Ubuntu)
+We use this method:
+
+✅ Build image on internet machine\
+✅ Export Docker image\
+✅ Transfer to Ubuntu server\
+✅ Load and run locally
+
+No GitHub access required on the server.
 
 ------------------------------------------------------------------------
 
-## 📦 Prerequisites
+# 🧱 Architecture Overview
 
-Install Docker & Git:
+Machine A (Internet Access) → Build Docker image → Export image (.tar
+file)
+
+Machine B (Your Ubuntu Server) → Load image → Run Docker Compose →
+Create site → Install apps
+
+------------------------------------------------------------------------
+
+# 🖥 PART 1 --- Setup Ubuntu Server (Offline Machine)
+
+## 1️⃣ Install Docker (Ubuntu 24.04)
 
 ``` bash
 sudo apt update
-sudo apt install docker.io docker-compose-plugin git -y
+sudo apt install ca-certificates curl gnupg -y
+
+sudo install -m 0755 -d /etc/apt/keyrings
+
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+echo   "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg]   https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" |   sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+sudo apt update
+sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+```
+
+Enable Docker:
+
+``` bash
 sudo systemctl enable docker
 sudo systemctl start docker
 sudo usermod -aG docker $USER
@@ -30,30 +59,20 @@ docker --version
 docker compose version
 ```
 
+Do NOT build anything on this server.
+
 ------------------------------------------------------------------------
 
-## 1️⃣ Clone Official Frappe Docker
+# 💻 PART 2 --- On Internet Machine
+
+## 1️⃣ Clone Frappe Docker
 
 ``` bash
 git clone https://github.com/frappe/frappe_docker
 cd frappe_docker
 ```
 
-------------------------------------------------------------------------
-
-## 2️⃣ Clone Custom Compose & ENV Files
-
-``` bash
-cd ..
-git clone https://github.com/prem-raichura/ERPNext-Setup.git
-cp ERPNext-Setup/compose.yaml frappe_docker/
-cp ERPNext-Setup/example.env frappe_docker/.env
-cd frappe_docker
-```
-
-------------------------------------------------------------------------
-
-## 3️⃣ Create apps.json
+## 2️⃣ Create apps.json
 
 ``` bash
 nano apps.json
@@ -76,7 +95,7 @@ Paste:
 
 ------------------------------------------------------------------------
 
-## 4️⃣ Build Custom Docker Image
+## 3️⃣ Build Custom Image
 
 ``` bash
 docker build \
@@ -88,58 +107,123 @@ docker build \
   --file=images/custom/Containerfile .
 ```
 
-Wait for build to complete.
-
 ------------------------------------------------------------------------
 
-## 5️⃣ Edit .env
+## 4️⃣ Export Docker Image
 
 ``` bash
-nano .env
+docker save custom-erpnext-hrms:v16 -o erpnext-v16-offline.tar
 ```
 
-Ensure:
+Transfer `erpnext-v16-offline.tar` to your Ubuntu server.
 
-``` env
-CUSTOM_IMAGE=custom-erpnext-hrms
-CUSTOM_TAG=v16
-DB_ROOT_PASSWORD=StrongDBPassword123
+------------------------------------------------------------------------
+
+# 🖥 PART 3 --- Back on Ubuntu Server
+
+## 1️⃣ Load Docker Image
+
+``` bash
+docker load -i erpnext-v16-offline.tar
+```
+
+Verify:
+
+``` bash
+docker images
+```
+
+You should see:
+
+custom-erpnext-hrms v16
+
+------------------------------------------------------------------------
+
+## 2️⃣ Create compose.yaml
+
+``` bash
+nano compose.yaml
+```
+
+Paste:
+
+``` yaml
+version: "3.9"
+
+services:
+
+  mariadb:
+    image: mariadb:10.6
+    environment:
+      MYSQL_ROOT_PASSWORD: admin
+    volumes:
+      - mariadb-data:/var/lib/mysql
+
+  redis-cache:
+    image: redis:7
+
+  redis-queue:
+    image: redis:7
+
+  backend:
+    image: custom-erpnext-hrms:v16
+    depends_on:
+      - mariadb
+      - redis-cache
+      - redis-queue
+    volumes:
+      - sites:/home/frappe/frappe-bench/sites
+
+  scheduler:
+    image: custom-erpnext-hrms:v16
+    command: bench schedule
+    depends_on:
+      - backend
+    volumes:
+      - sites:/home/frappe/frappe-bench/sites
+
+  worker:
+    image: custom-erpnext-hrms:v16
+    command: bench worker
+    depends_on:
+      - backend
+    volumes:
+      - sites:/home/frappe/frappe-bench/sites
+
+  frontend:
+    image: custom-erpnext-hrms:v16
+    command: nginx-entrypoint.sh
+    ports:
+      - "8080:8080"
+    depends_on:
+      - backend
+    volumes:
+      - sites:/home/frappe/frappe-bench/sites
+
+volumes:
+  mariadb-data:
+  sites:
 ```
 
 ------------------------------------------------------------------------
 
-## 6️⃣ Start Containers
+## 3️⃣ Start Containers
 
 ``` bash
 docker compose up -d
-docker ps
 ```
 
 ------------------------------------------------------------------------
 
-## 7️⃣ Add Local Host Entry
+## 4️⃣ Create ERPNext Site
 
 ``` bash
-sudo nano /etc/hosts
-```
-
-Add:
-
-    127.0.0.1 erp.localhost
-
-------------------------------------------------------------------------
-
-## 8️⃣ Create Site
-
-``` bash
-docker compose exec backend bench new-site erp.localhost \
-  --db-root-password StrongDBPassword123 \
-  --admin-password Admin@123
+docker compose exec backend bench new-site erp.localhost   --db-root-password admin   --admin-password Admin@123
 ```
 
 ------------------------------------------------------------------------
 
-## 9️⃣ Install ERPNext + HRMS
+## 5️⃣ Install Apps
 
 ``` bash
 docker compose exec backend bench --site erp.localhost install-app erpnext
@@ -148,42 +232,27 @@ docker compose exec backend bench --site erp.localhost install-app hrms
 
 ------------------------------------------------------------------------
 
-## 🔟 Access ERPNext
+## 6️⃣ Access ERPNext
 
 Open in browser:
 
-    http://erp.localhost:8080
+http://SERVER-IP:8080
 
-Login with:
+Login:
 
--   Username: Administrator
--   Password: Admin@123
-
-------------------------------------------------------------------------
-
-## 📁 Final Folder Structure
-
-    frappe_docker/
-    ├── compose.yaml
-    ├── .env
-    ├── apps.json
-    └── images/custom/Containerfile
+Username: Administrator\
+Password: Admin@123
 
 ------------------------------------------------------------------------
 
-## ⚙️ Recommended Versions
+# ✅ Result
 
--   Python: 3.11
--   MariaDB: 10.6
--   Redis: 7
--   Docker: 24+
--   RAM: Minimum 6--8GB
+✔ Fully offline-compatible\
+✔ No GitHub access required\
+✔ Custom ERPNext + HRMS image\
+✔ Works on Ubuntu 24.04
 
 ------------------------------------------------------------------------
 
-## 🎉 Done
-
-You now have a complete Ubuntu Docker setup for ERPNext v16 + HRMS v16.
-
-For production deployment (SSL, domain, backups), additional
-configuration is required.
+For production (SSL, domain, backups), additional configuration is
+required.
