@@ -1,6 +1,6 @@
-# 🚀 ERPNext v16 + HRMS v16 Offline Docker Setup (Ubuntu 24.04)
+# Custom ERPNext & HRMS Docker Setup (Ubuntu 24.04)
 
-This guide explains how to deploy ERPNext v16 + HRMS v16 on Ubuntu 24.04
+This guide explains how to deploy ERPNext v16 & HRMS v16 on Ubuntu 24.04
 using your custom Docker Compose configuration from:
 
 -   compose.yaml\
