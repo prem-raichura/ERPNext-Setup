@@ -1,4 +1,4 @@
-# Custom ERPNext & HRMS Docker Setup
+# Custom ERPNext & HRMS Docker Setup (Windows)
 
 ![ERPNext Version](https://img.shields.io/badge/ERPNext-v15-blue?style=flat-square&logo=erpnext)
 ![Frappe Version](https://img.shields.io/badge/Frappe-v15-blue?style=flat-square&logo=frappe)
