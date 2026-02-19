@@ -1,26 +1,28 @@
 # 🚀 ERPNext v16 + HRMS v16 Offline Docker Setup (Ubuntu 24.04)
 
-This guide explains how to install ERPNext + HRMS on an Ubuntu server
-when GitHub access is blocked by a firewall.
+This guide explains how to deploy ERPNext v16 + HRMS v16 on Ubuntu 24.04
+using your custom Docker Compose configuration from:
 
-We use this method:
+-   compose.yaml\
+    https://github.com/prem-raichura/ERPNext-Setup/blob/main/compose.yaml
 
-✅ Build image on internet machine\
-✅ Export Docker image\
-✅ Transfer to Ubuntu server\
-✅ Load and run locally
+-   example.env\
+    https://github.com/prem-raichura/ERPNext-Setup/blob/main/example.env
 
-No GitHub access required on the server.
+This setup supports firewall-restricted environments by building the
+Docker image on a machine with internet access and transferring it to
+the Ubuntu server.
 
 ------------------------------------------------------------------------
 
 # 🧱 Architecture Overview
 
-Machine A (Internet Access) → Build Docker image → Export image (.tar
-file)
+Machine A (Internet Access) → Clone frappe_docker → Build custom image →
+Export image (.tar)
 
-Machine B (Your Ubuntu Server) → Load image → Run Docker Compose →
-Create site → Install apps
+Machine B (Ubuntu Server -- Offline) → Install Docker → Copy
+compose.yaml + .env → Load image → Start services → Create site →
+Install apps
 
 ------------------------------------------------------------------------
 
@@ -59,8 +61,6 @@ docker --version
 docker compose version
 ```
 
-Do NOT build anything on this server.
-
 ------------------------------------------------------------------------
 
 # 💻 PART 2 --- On Internet Machine
@@ -93,8 +93,6 @@ Paste:
 ]
 ```
 
-------------------------------------------------------------------------
-
 ## 3️⃣ Build Custom Image
 
 ``` bash
@@ -107,9 +105,7 @@ docker build \
   --file=images/custom/Containerfile .
 ```
 
-------------------------------------------------------------------------
-
-## 4️⃣ Export Docker Image
+## 4️⃣ Export Image
 
 ``` bash
 docker save custom-erpnext-hrms:v16 -o erpnext-v16-offline.tar
@@ -121,7 +117,51 @@ Transfer `erpnext-v16-offline.tar` to your Ubuntu server.
 
 # 🖥 PART 3 --- Back on Ubuntu Server
 
-## 1️⃣ Load Docker Image
+## 1️⃣ Create Project Directory
+
+``` bash
+mkdir erpnext
+cd erpnext
+```
+
+## 2️⃣ Copy Required Files
+
+Download from your GitHub repo:
+
+``` bash
+wget https://raw.githubusercontent.com/prem-raichura/ERPNext-Setup/main/compose.yaml
+wget https://raw.githubusercontent.com/prem-raichura/ERPNext-Setup/main/example.env
+mv example.env .env
+```
+
+(If firewall blocks raw access, download manually on another machine and
+transfer them.)
+
+------------------------------------------------------------------------
+
+## 3️⃣ Edit .env
+
+``` bash
+nano .env
+```
+
+Ensure the following values are set:
+
+``` env
+CUSTOM_IMAGE=custom-erpnext-hrms
+CUSTOM_TAG=v16
+ERPNEXT_VERSION=v16
+
+DB_PASSWORD=StrongDBPassword123
+PULL_POLICY=never
+RESTART_POLICY=unless-stopped
+```
+
+Save and exit.
+
+------------------------------------------------------------------------
+
+## 4️⃣ Load Docker Image
 
 ``` bash
 docker load -i erpnext-v16-offline.tar
@@ -139,91 +179,42 @@ custom-erpnext-hrms v16
 
 ------------------------------------------------------------------------
 
-## 2️⃣ Create compose.yaml
-
-``` bash
-nano compose.yaml
-```
-
-Paste:
-
-``` yaml
-version: "3.9"
-
-services:
-
-  mariadb:
-    image: mariadb:10.6
-    environment:
-      MYSQL_ROOT_PASSWORD: admin
-    volumes:
-      - mariadb-data:/var/lib/mysql
-
-  redis-cache:
-    image: redis:7
-
-  redis-queue:
-    image: redis:7
-
-  backend:
-    image: custom-erpnext-hrms:v16
-    depends_on:
-      - mariadb
-      - redis-cache
-      - redis-queue
-    volumes:
-      - sites:/home/frappe/frappe-bench/sites
-
-  scheduler:
-    image: custom-erpnext-hrms:v16
-    command: bench schedule
-    depends_on:
-      - backend
-    volumes:
-      - sites:/home/frappe/frappe-bench/sites
-
-  worker:
-    image: custom-erpnext-hrms:v16
-    command: bench worker
-    depends_on:
-      - backend
-    volumes:
-      - sites:/home/frappe/frappe-bench/sites
-
-  frontend:
-    image: custom-erpnext-hrms:v16
-    command: nginx-entrypoint.sh
-    ports:
-      - "8080:8080"
-    depends_on:
-      - backend
-    volumes:
-      - sites:/home/frappe/frappe-bench/sites
-
-volumes:
-  mariadb-data:
-  sites:
-```
-
-------------------------------------------------------------------------
-
-## 3️⃣ Start Containers
+## 5️⃣ Start Services
 
 ``` bash
 docker compose up -d
 ```
 
-------------------------------------------------------------------------
-
-## 4️⃣ Create ERPNext Site
+Check containers:
 
 ``` bash
-docker compose exec backend bench new-site erp.localhost   --db-root-password admin   --admin-password Admin@123
+docker ps
+```
+
+You should see:
+
+-   configurator
+-   backend
+-   frontend
+-   websocket
+-   queue-short
+-   queue-long
+-   scheduler
+-   mariadb
+-   redis-cache
+-   redis-queue
+
+------------------------------------------------------------------------
+
+## 6️⃣ Create ERPNext Site
+
+``` bash
+docker compose exec backend bench new-site erp.localhost   --db-root-password StrongDBPassword123   --admin-password Admin@123
 ```
 
 ------------------------------------------------------------------------
 
-## 5️⃣ Install Apps
+## 7️⃣ Install Apps
 
 ``` bash
 docker compose exec backend bench --site erp.localhost install-app erpnext
@@ -232,7 +223,7 @@ docker compose exec backend bench --site erp.localhost install-app hrms
 
 ------------------------------------------------------------------------
 
-## 6️⃣ Access ERPNext
+## 8️⃣ Access ERPNext
 
 Open in browser:
 
@@ -245,14 +236,21 @@ Password: Admin@123
 
 ------------------------------------------------------------------------
 
-# ✅ Result
+# 📁 Final Structure
 
-✔ Fully offline-compatible\
-✔ No GitHub access required\
-✔ Custom ERPNext + HRMS image\
-✔ Works on Ubuntu 24.04
+    erpnext/
+    ├── compose.yaml
+    ├── .env
+    └── erpnext-v16-offline.tar (optional after load)
 
 ------------------------------------------------------------------------
 
-For production (SSL, domain, backups), additional configuration is
-required.
+# ✅ Result
+
+✔ Uses your exact GitHub compose.yaml\
+✔ Uses your example.env configuration\
+✔ Fully offline-capable\
+✔ Custom ERPNext v16 + HRMS v16 image\
+✔ Production-ready architecture
+
+For SSL, domain, and backup configuration, additional setup is required.
