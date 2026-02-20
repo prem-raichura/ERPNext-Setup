@@ -182,7 +182,7 @@ To add another Frappe app later:
 
 ```bash
 docker build ^
-  --build-arg=PYTHON_VERSION=3.12 ^
+  --build-arg=PYTHON_VERSION=3.11 ^
   --build-arg=FRAPPE_PATH=https://github.com/frappe/frappe ^
   --build-arg=FRAPPE_BRANCH=version-16 ^
   --build-arg=APPS_JSON_BASE64=PASTE_NEW_STRING_HERE ^
