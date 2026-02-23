@@ -97,7 +97,7 @@ Paste:
 
 ``` bash
 docker build \
-  --build-arg=PYTHON_VERSION=3.11 \
+  --build-arg=PYTHON_VERSION=3.14 \
   --build-arg=FRAPPE_PATH=https://github.com/frappe/frappe \
   --build-arg=FRAPPE_BRANCH=version-16 \
   --build-arg=APPS_JSON_BASE64=$(base64 -w 0 apps.json) \
