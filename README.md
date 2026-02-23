@@ -45,14 +45,42 @@ Before starting, ensure you have the following tools installed:
 
 Follow these steps **in order** to set up your environment.
 
-### Step 1: Clone the Repository
 
-Clone the official Frappe Docker repository:
+## Step 1: Clone Repository
 
-```bash
+``` bash
 git clone https://github.com/frappe/frappe_docker
 cd frappe_docker
 ```
+
+------------------------------------------------------------------------
+
+> \[!IMPORTANT\]\
+> You MUST edit the Dockerfile to prevent nginx container startup
+> failure due to Windows CRLF line endings.
+
+### Edit File
+
+**Path:**
+
+    images/custom/dockerfile
+
+> Find this line:
+
+``` dockerfile
+COPY resources/core/nginx/nginx-entrypoint.sh /usr/local/bin/nginx-entrypoint.sh
+```
+
+> Add these two lines immediately below it:
+
+``` dockerfile
+RUN sed -i 's/\r$//' /usr/local/bin/nginx-entrypoint.sh
+RUN chmod +x /usr/local/bin/nginx-entrypoint.sh
+```
+
+> This ensures proper line endings and executable permissions inside the
+container.
+
 
 ---
 
