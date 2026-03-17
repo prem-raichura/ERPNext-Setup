@@ -199,6 +199,19 @@ docker compose exec backend bench new-site erp.localhost   --db-root-password St
 docker compose exec backend bench --site erp.localhost install-app erpnext
 docker compose exec backend bench --site erp.localhost install-app hrms
 ```
+---
+> [!IMPORTANT] 
+>## Fix MySQL User Host Issue
+>After installing apps, login into MariaDB:
+>```bash
+>docker compose exec mariadb mysql -u root -p
+>```
+>Run:
+>```sql
+>RENAME USER '_3abcefxxxxxxxx'@'172.18.x.x' TO '_3abcefxxxxxxxx'@'%';
+>FLUSH PRIVILEGES;
+>```
+> Replace `_3abcefxxxxxxxx` with your actual DB user.
 
 ------------------------------------------------------------------------
 
